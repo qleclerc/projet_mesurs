@@ -13,6 +13,9 @@ model_function = function(t, pop, param) {
     
     # Total force of infection
     # workplace infections + weekend infections + homework infections
+    # For a frequency-dependent model, R0 = beta*prop_a/gamma_a
+    # For a density-dependent model, R0 = beta*prop_a*N/gamma_a
+    beta = R0*gamma_a/(prop_a)
     lambda = beta*(Ia/N)*(5/7*(1-alpha)) + lambda_v*(5/7*alpha) + lambda_v*epsilon*(2/7)
     
     # Susceptible

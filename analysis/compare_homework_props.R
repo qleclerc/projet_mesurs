@@ -10,7 +10,8 @@ library(cowplot)
 
 source(here::here("Model", "model.R"))
 
-beta = 3              # rate of infection in workplace
+# beta = 3              # rate of infection in workplace
+R0 = 3.3              # Basic reproduction number 
 alpha = 0             # proportion of homeworking
 max_lambda_v = 0.01   # maximum community force of infection
 period = 200          # duration of epidemic wave in community
