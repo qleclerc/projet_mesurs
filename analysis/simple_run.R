@@ -10,10 +10,11 @@ library(cowplot)
 source(here::here("Model", "model.R"))
 
 R0 = 3.3              # Basic reproduction number
-alpha = 0             # proportion of homeworking
+alpha = 0             # proportion of teleworking
+omega = 0.001         # maximum rate of chronic disease due to teleworking
 max_lambda_v = 0.01   # maximum community force of infection
 period = 200          # duration of epidemic wave in community
-epsilon = 0.5         # relative force of infection during homeworking
+epsilon = 0.5         # relative force of infection during teleworking
 sigma = 1/3           # progression rate from exposed to infected
 prop_a = 0.2          # proportion of asymptomatic infections
 gamma_a = 1/5         # recovery rate for asymptomatics
@@ -27,8 +28,8 @@ I0 = 0      # initial workplace infected
 S0 = N-I0   # initial workplace susceptibles
 
 Time = seq(from=0,to=Tmax,by=dt)
-Init.cond = c(S=S0,E=0,Ia=I0,Is=0,R=0) 
-param = c(beta, max_lambda_v, period, epsilon, prop_a, gamma_a, gamma_s, sigma)
+Init.cond = c(S=S0,E=0,Ia=I0,Is=0,R=0,S_c=0,E_c=0,Ia_c=0,Is_c=0,R_c=0) 
+param = c(R0, alpha, omega, max_lambda_v, period, epsilon, sigma, prop_a, gamma_a, gamma_s)
 
 result = as.data.frame(lsoda(Init.cond, Time, model_function, param))
 

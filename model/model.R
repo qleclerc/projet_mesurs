@@ -5,40 +5,66 @@ model_function = function(t, pop, param) {
   
   with(as.list(c(param, pop)), {
     
-    N=S+E+Ia+Is+R
+    N=S+E+Ia+Is+R+S_c+E_c+Ia_c+Is_c+R_c
     
     # Community force of infection
     # estimated with a sin function, shifted by 300 to align with the start of the simulation
     lambda_v = max_lambda_v/2*(sin((2*pi/period)*t+300)+1)
     
     # Total force of infection
-    # workplace infections + weekend infections + homework infections
+    # workplace infections + weekend infections + telework infections
     # For a frequency-dependent model, R0 = beta*alpha/gamma_a
     # For a density-dependent model, R0 = beta*alpha*N/gamma_a
     beta = R0*gamma_a/(prop_a)
-    lambda = beta*(Ia/N)*(5/7*(1-alpha)) + lambda_v*epsilon*(5/7*alpha) + lambda_v*(2/7)
+    lambda = beta*((Ia+Ia_c)/N)*(5/7*(1-alpha)) + lambda_v*epsilon*(5/7*alpha) + lambda_v*(2/7)
     
+    
+    # Individuals without work-related chronic disease ####
     # Susceptible
-    # - workplace infections - weekend infections - homework infections
-    dS = -lambda*S
+    # - workplace infections - weekend infections - telework infections - chronic disease incidence
+    dS = -lambda*S - omega*alpha*S
     
     # Exposed
-    # + infections - progressions to infected
-    dE = lambda*S - sigma*E
+    # + infections - progressions to infected - chronic disease incidence
+    dE = lambda*S - sigma*E - omega*alpha*E
     
     # Infected (asymptomatic)
-    # + progressions from exposed - recoveries
-    dIa = sigma*E*prop_a - gamma_a*Ia
+    # + progressions from exposed - recoveries - chronic disease incidence
+    dIa = sigma*E*prop_a - gamma_a*Ia - omega*alpha*Ia
     
     # Infected (symptomatic)
+    # Note: no chronic disease incidence, as we assume these individuals are not working
     # + progressions from exposed - recoveries
     dIs = sigma*E*(1-prop_a) - gamma_s*Is
     
     # Recovered
-    # + recoveries
-    dR = Ia*gamma_a + Is*gamma_s
+    # + recoveries - chronic disease incidence
+    dR = Ia*gamma_a + Is*gamma_s - omega*alpha*R
     
-    list(c(dS, dE, dIa, dIs, dR))
+    
+    
+    # Individuals without work-related chronic disease ####
+    # Susceptible
+    # - workplace infections - weekend infections - telework infections + chronic disease incidence
+    dS_c = -lambda*S_c + omega*alpha*S
+    
+    # Exposed
+    # + infections - progressions to infected + chronic disease incidence
+    dE_c = lambda*S_c - sigma*E_c + omega*alpha*E
+    
+    # Infected (asymptomatic)
+    # + progressions from exposed - recoveries + chronic disease incidence
+    dIa_c = sigma*E_c*prop_a - gamma_a*Ia_c + omega*alpha*Ia
+    
+    # Infected (symptomatic)
+    # + progressions from exposed - recoveries
+    dIs_c = sigma*E_c*(1-prop_a) - gamma_s*Is_c
+    
+    # Recovered
+    # + recoveries + chronic disease incidence
+    dR_c = Ia_c*gamma_a + Is_c*gamma_s + omega*alpha*R
+    
+    list(c(dS, dE, dIa, dIs, dR, dS_c, dE_c, dIa_c, dIs_c, dR_c))
     
   })
   
