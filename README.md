@@ -9,13 +9,13 @@ Contains the script for the model.
 
 We modelled SARS-CoV-2 transmission in a company of $N$ employees using a compartmental model. In this model, employees can be susceptible to the respiratory disease $S$, exposed to the disease but not yet infectious $E$, infectious and asymptomatic $I_A$, infectious and symptomatic $I_S$, or recovered $R$. 
 
-```math
-\frac{dS}{dt} = - \lambda S I_A \\
-\frac{dE}{dt} = \lambda S I_A - \sigma E \\
-\frac{dI_A}{dt} = p_A \sigma E - \gamma_A I_A \\
-\frac{dI_S}{dt} = (1-p_A) \sigma E - \gamma_A I_S \\
-\frac{dR}{dt} = \gamma_A I_A + \gamma_S I_S 
-```
+
+$$\frac{dS}{dt} = - \lambda S I_A \\$$
+$$\frac{dE}{dt} = \lambda S I_A - \sigma E \\$$
+$$\frac{dI_A}{dt} = p_A \sigma E - \gamma_A I_A \\$$
+$$\frac{dI_S}{dt} = (1-p_A) \sigma E - \gamma_A I_S \\$$
+$$\frac{dR}{dt} = \gamma_A I_A + \gamma_S I_S $$
+
 
 In this compartmental model, infected individuals can develop symptoms with probability $1-p_A$ but their incubation period (here, time from infection to time of the onset of infectiousness) is the same whether they develop symptoms or not and is equal to $\frac{1}{\sigma}$. Infectious and symptomatic individuals are infectious for $\frac{1}{\gamma_S}$ days and are assumed to be on medical leave from their symptom/infectiousness onset to their recovery. Thereby, these individuals do not contribute to the propagation of the epidemic within the company. Infectious and asymptomatic individuals are infectious for $\frac{1}{\gamma_A}$ days and are responsible for the spread of the disease within the company.
 
