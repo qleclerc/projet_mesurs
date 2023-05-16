@@ -10,10 +10,10 @@ Contains the script for the model.
 We modelled SARS-CoV-2 transmission in a company of $N$ employees using a compartmental model. In this model, employees can be susceptible to the respiratory disease $S$, exposed to the disease but not yet infectious $E$, infectious and asymptomatic $I_A$, infectious and symptomatic $I_S$, or recovered $R$. 
 
 
-$$\frac{dS}{dt} = - \lambda S I_A \\$$
-$$\frac{dE}{dt} = \lambda S I_A - \sigma E \\$$
-$$\frac{dI_A}{dt} = p_A \sigma E - \gamma_A I_A \\$$
-$$\frac{dI_S}{dt} = (1-p_A) \sigma E - \gamma_A I_S \\$$
+$$\frac{dS}{dt} = - \lambda S I_A $$
+$$\frac{dE}{dt} = \lambda S I_A - \sigma E $$
+$$\frac{dI_A}{dt} = p_A \sigma E - \gamma_A I_A $$
+$$\frac{dI_S}{dt} = (1-p_A) \sigma E - \gamma_A I_S $$
 $$\frac{dR}{dt} = \gamma_A I_A + \gamma_S I_S $$
 
 
