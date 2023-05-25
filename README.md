@@ -7,29 +7,29 @@ Contains the script for the model.
 
 ### Equations of the model
 
-We modelled SARS-CoV-2 transmission in a company of $N$ employees using a compartmental model. In this model, employees can be susceptible to the respiratory disease $S$, exposed to the disease but not yet infectious $E1$, exposed to the disease and infectious but not yet sick $E2$, infectious and asymptomatic $I_A$, infectious and symptomatic $I_S$, or recovered $R$. 
+We modelled SARS-CoV-2 transmission in a company of $N$ employees using a compartmental model. In this model, employees can be susceptible to the respiratory disease $S$, exposed to the disease but not yet infectious $E$, infectious and asymptomatic $I_A$, infectious and pre-symptomatic $P$, infectious and symptomatic $I_S$, or recovered $R$. 
 
 
 $$\frac{dS}{dt} = - \lambda S$$
 
-$$\frac{dE1}{dt} = \lambda S - \sigma E1$$
+$$\frac{dE}{dt} = \lambda S - \sigma E$$
 
-$$\frac{dE2}{dt} = \sigma E1 - \rho E2 $$
+$$\frac{dI_A}{dt} = p_A \sigma E - \gamma_A I_A$$
 
-$$\frac{dI_A}{dt} = p_A \rho E2 - \gamma_A I_A$$
+$$\frac{dP}{dt} = (1-p_A) \sigma E - \rho P $$
 
-$$\frac{dI_S}{dt} = (1-p_A) \rho E2 - \gamma_S I_S$$
+$$\frac{dI_S}{dt} = \rho P - \gamma_S I_S$$
 
 $$\frac{dR}{dt} = \gamma_A I_A + \gamma_S I_S$$
 
 
-In this compartmental model, infected individuals can develop symptoms with probability $1-p_A$ but their incubation period (here, time from infection to time of the onset of infectiousness) is the same whether they develop symptoms or not and is equal to $\frac{1}{\sigma}$. We also consider that for all individuals there is a pre-symptomatic infectious phase, with a duration equal to $\frac{1}{\rho}$. Infectious and symptomatic individuals are infectious for $\frac{1}{\gamma_S}$ days and are assumed to be on medical leave from their symptom/infectiousness onset to their recovery. Thereby, these individuals do not contribute to the propagation of the epidemic within the company. Infectious and asymptomatic individuals are infectious for $\frac{1}{\gamma_A}$ days and are responsible for the spread of the disease within the company.
+In this compartmental model, infected individuals can develop symptoms with probability $1-p_A$ but their incubation period (here, time from infection to time of the onset of infectiousness) is the same whether they develop symptoms or not and is equal to $\frac{1}{\sigma}$. Individuals who will become symptomatic first enter a phase where they are still pre-symptomatic but already infectious, with a duration equal to $\frac{1}{\rho}$, during which they can spread the disease within the company. Infectious and symptomatic individuals are infectious for $\frac{1}{\gamma_S}$ days and are assumed to be on medical leave from their symptom/infectiousness onset to their recovery. Thereby, these individuals do not contribute to the propagation of the epidemic within the company. Infectious and asymptomatic individuals are infectious for $\frac{1}{\gamma_A}$ days and can spread the disease within the company.
 
 The transmission rate $\lambda$ is divided into three terms as follows:
 
-$$\lambda = \frac{5}{7} (1-\alpha) (\beta_A \frac{I_A}{N} + \beta_E \frac{E2}{N}) + \frac{5}{7} \alpha \epsilon \lambda_v + \frac{2}{7} \lambda_v$$
+$$\lambda = \frac{5}{7} (1-\alpha) ( (1-\alpha) \beta_A \frac{I_A}{N} + (1-\alpha) \beta_P \frac{P}{N}) + \frac{5}{7} \alpha \epsilon \lambda_v + \frac{2}{7} \lambda_v$$
 
-**A modifier**
+***A modifier avec les nouveaux beta***
 
 Where $\beta_A$ is expressed using SARS-CoV-2 $R_0$ that we derived from the next-generation matrix for a frequency-dependent model $\beta = \frac{R_0 \gamma_A}{p_A}$, $\alpha$ is the proportion of employees teleworking, $\lambda_v$ is the transmission rate from the community, and $\epsilon$ is a coefficient reducing the transmission from the community on teleworking days.
 

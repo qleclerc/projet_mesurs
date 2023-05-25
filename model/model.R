@@ -5,7 +5,7 @@ model_function = function(t, pop, param) {
   
   with(as.list(c(param, pop)), {
     
-    N=S+E1+E2+Ia+Is+R+S_c+E1_c+E2_c+Ia_c+Is_c+R_c
+    N=S+E+Ia+P+Is+R+S_c+E_c+Ia_c+P_c+Is_c+R_c
     
     # Community force of infection
     # estimated with a sin function, shifted by 300 to align with the start of the simulation
@@ -15,8 +15,12 @@ model_function = function(t, pop, param) {
     # workplace infections + weekend infections + telework infections
     # For a frequency-dependent model, R0 = beta*alpha/gamma_a
     # For a density-dependent model, R0 = beta*alpha*N/gamma_a
+    
+    ## TODO change beta calculation here!
     beta = R0*gamma_a/(prop_a)
-    lambda = beta*((Ia+Ia_c)/N)*(5/7*(1-alpha)) + lambda_v*epsilon*(5/7*alpha) + lambda_v*(2/7)
+    beta_Ia = beta
+    beta_P = beta
+    lambda = ((1-alpha)*beta_Ia*(Ia+Ia_c)/N + (1-alpha)*beta_P*(P+P_c)/N) *(5/7*(1-alpha)) + lambda_v*epsilon*(5/7*alpha) + lambda_v*(2/7)
     
     
     # Individuals without work-related chronic disease ####
@@ -25,21 +29,21 @@ model_function = function(t, pop, param) {
     dS = -lambda*S - omega*alpha*S
     
     # Exposed (non-infectious)
-    # + infections - progressions to exposed infectious - chronic disease incidence
-    dE1 = lambda*S - sigma*E1 - omega*alpha*E1
-    
-    # Exposed (infectious)
-    # + progressions from exposed non-infectious - progressions to infected - chronic disease incidence
-    dE2 = sigma*E1 - rho*E2 - omega*alpha*E2
+    # + infections - progressions to infectious - chronic disease incidence
+    dE = lambda*S - sigma*E - omega*alpha*E
     
     # Infected (asymptomatic)
     # + progressions from exposed - recoveries - chronic disease incidence
-    dIa = rho*E2*prop_a - gamma_a*Ia - omega*alpha*Ia
+    dIa = sigma*E*prop_a - gamma_a*Ia - omega*alpha*Ia
+    
+    # Pre-symptomatic (infectious)
+    # + progressions from exposed - progressions to symptomatic - chronic disease incidence
+    dP = sigma*E*(1-prop_a) - rho*P - omega*alpha*P
     
     # Infected (symptomatic)
     # Note: no chronic disease incidence, as we assume these individuals are not working
-    # + progressions from exposed - recoveries
-    dIs = rho*E2*(1-prop_a) - gamma_s*Is
+    # + progressions from pre-symptomatic - recoveries
+    dIs = rho*P - gamma_s*Is
     
     # Recovered
     # + recoveries - chronic disease incidence
@@ -53,26 +57,26 @@ model_function = function(t, pop, param) {
     dS_c = -lambda*S_c + omega*alpha*S
     
     # Exposed (non-infectious)
-    # + infections - progressions to infected + chronic disease incidence
-    dE1_c = lambda*S_c - sigma*E1_c + omega*alpha*E1
-    
-    # Exposed (infectious)
-    # + progressions from exposed non-infectious - progressions to infected + chronic disease incidence
-    dE2_c = sigma*E1_c - rho*E2_c + omega*alpha*E2
+    # + infections - progressions to infectious + chronic disease incidence
+    dE_c = lambda*S_c - sigma*E_c + omega*alpha*E
     
     # Infected (asymptomatic)
     # + progressions from exposed - recoveries + chronic disease incidence
-    dIa_c = rho*E2_c*prop_a - gamma_a*Ia_c + omega*alpha*Ia
+    dIa_c = sigma*E_c*prop_a - gamma_a*Ia_c + omega*alpha*Ia
+    
+    # Pre-symptomatic (infectious)
+    # + progressions from exposed - progressions to symptomatic + chronic disease incidence
+    dP_c = sigma*E_c*(1-prop_a) - rho*P_c + omega*alpha*P
     
     # Infected (symptomatic)
-    # + progressions from exposed - recoveries
-    dIs_c = rho*E2_c*(1-prop_a) - gamma_s*Is_c
+    # + progressions from pre-symptomatic - recoveries
+    dIs_c = rho*P_c - gamma_s*Is_c
     
     # Recovered
     # + recoveries + chronic disease incidence
     dR_c = Ia_c*gamma_a + Is_c*gamma_s + omega*alpha*R
     
-    list(c(dS, dE1, dE2, dIa, dIs, dR, dS_c, dE1_c, dE2_c, dIa_c, dIs_c, dR_c))
+    list(c(dS, dE, dIa, dP, dIs, dR, dS_c, dE_c, dIa_c, dP_c, dIs_c, dR_c))
     
   })
   
