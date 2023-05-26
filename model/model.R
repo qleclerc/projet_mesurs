@@ -16,12 +16,16 @@ model_function = function(t, pop, param) {
     # For a frequency-dependent model, R0 = beta*alpha/gamma_a
     # For a density-dependent model, R0 = beta*alpha*N/gamma_a
     
-    ## TODO change beta calculation here!
-    beta = R0*gamma_a/(prop_a)
-    beta_Ia = beta
-    beta_P = beta
-    lambda = ((1-alpha)*beta_Ia*(Ia+Ia_c)/N + (1-alpha)*beta_P*(P+P_c)/N) *(5/7*(1-alpha)) + lambda_v*epsilon*(5/7*alpha) + lambda_v*(2/7)
-    
+    ## TODO change beta calculation here! DONE !
+    if (alpha == 1) {
+      beta = 0
+    } else {
+      beta = R0 * rho * gamma_a / ( (1-alpha) * ((1-prop_a) * gamma_a + rho * nu * prop_a) )
+    }
+    lambda = 
+      5/7 * (1-alpha) * beta / (N-Is) * (nu * (Ia+Ia_c) + (P+P_c)) + 
+      5/7 * alpha * epsilon * lambda_v + 
+      2/7 * lambda_v
     
     # Individuals without work-related chronic disease ####
     # Susceptible

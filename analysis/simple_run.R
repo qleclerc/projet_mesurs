@@ -6,14 +6,16 @@ library(ggplot2)
 library(reshape2)
 library(dplyr)
 library(cowplot)
+library(ggpubr)
 
 source(here::here("Model", "model.R"))
 
 R0 = 3.3              # Basic reproduction number
-alpha = 0             # proportion of teleworking
-omega = 0.001         # maximum rate of chronic disease due to teleworking
+alpha = 0.1           # proportion of teleworking
+omega = 1/100/365     # maximum rate of chronic disease due to teleworking
 max_lambda_v = 0.01   # maximum community force of infection
 period = 200          # duration of epidemic wave in community
+nu = 0.35             # relative force of infection of asymptomatic cases
 epsilon = 0.5         # relative force of infection during teleworking
 sigma = 1/1.5         # progression rate from exposed to infectious
 rho = 1/1.5           # progression rate from pre-symptomatic to symptomatic
@@ -30,15 +32,35 @@ S0 = N-I0   # initial workplace susceptibles
 
 Time = seq(from=0,to=Tmax,by=dt)
 Init.cond = c(S=S0,E=0,Ia=I0,P=0,Is=0,R=0,S_c=0,E_c=0,Ia_c=0,P_c=0,Is_c=0,R_c=0) 
-param = c(R0, alpha, omega, max_lambda_v, period, epsilon, sigma, rho, prop_a, gamma_a, gamma_s)
+param = c(R0, alpha, omega, max_lambda_v, period, nu, epsilon, sigma, rho, prop_a, gamma_a, gamma_s)
 
 result = as.data.frame(lsoda(Init.cond, Time, model_function, param))
 
-result %>%
+p1 = result %>%
+  mutate(
+    S = S + S_c, 
+    E = E + E_c, 
+    Ia = Ia + Ia_c,
+    P = P + P_c,
+    Is = Is + Is_c,
+    R = R + R_c
+    ) %>%
+  select(!contains("_c")) %>%
   melt(id.vars="time") %>%
   ggplot() +
   geom_line(aes(time, value, colour = variable)) +
   theme_bw() +
-  labs(x = "Time", y = "Number of individuals", col = "")
+  theme(plot.title = element_text(hjust = 0.5)) +
+  labs(x = "Time (days)", y = "", col = "", title = "Number of individuals")
+
+p2 = result %>%
+  mutate(Tot_c = S_c + E_c + Ia_c + P_c + Is_c + R_c) %>%
+  ggplot() +
+  geom_line(aes(time, Tot_c)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  labs(x = "Time (days)", y = "", col = "", title = "Number of individuals that will\ndevelop a chronic disease")
+
+ggarrange(p1, p2, common.legend = T, legend = "bottom", align = "hv")
 
 #ggsave(here::here("figures", "example_simple_run.png"))
