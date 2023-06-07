@@ -19,7 +19,10 @@ model_function = function(t, pop, param) {
     if (alpha == 1) {
       beta = 0
     } else {
-      beta = R0 * rho * gamma_a / ( (1-alpha) * ((1-prop_a) * gamma_a + rho * nu * prop_a) )
+      ########################## VOIR MODIFICATIONS ICI !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      beta_0 = R0 * rho * gamma_a / ((1-prop_a) * gamma_a + rho * nu * prop_a) 
+      beta = beta_0
+      #beta = R0_new * rho * gamma_a / ( (1-alpha) * ((1-prop_a) * gamma_a + rho * nu * prop_a) )
     }
     lambda = 
       5/7 * (1-alpha) * beta / (N-Is) * (nu * (Ia+Ia_c) + (P+P_c)) + 

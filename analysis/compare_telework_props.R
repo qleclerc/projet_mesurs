@@ -43,6 +43,7 @@ result_all = data.frame()
 
 for(alpha_t in alpha_to_try){
   param["alpha"] = alpha_t         # proportion of teleworking
+  print(param)
   result_all = rbind(result_all, data.frame(lsoda(Init.cond, Time, model_function, param), alpha = alpha_t))
 }
 
@@ -71,8 +72,8 @@ p2 = result_all %>%
   theme_bw() +
   labs(x = "Time (days)", y = "Cumulative number of individuals eventually\ndeveloping a chronic disease", col = "")
 
-p3 = data.frame(time = result0$time,
-                val = max_lambda_v/2*(sin((2*pi/period)*result0$time+300)+1)) %>%
+p3 = data.frame(time = result_all$time[result_all$alpha == 0],
+                val = max_lambda_v/2*(sin((2*pi/period)*result_all$time[result_all$alpha == 0]+300)+1)) %>%
   ggplot() +
   geom_line(aes(time, val)) +
   theme_bw() +
