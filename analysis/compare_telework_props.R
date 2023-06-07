@@ -43,7 +43,6 @@ result_all = data.frame()
 
 for(alpha_t in alpha_to_try){
   param["alpha"] = alpha_t         # proportion of teleworking
-  print(param)
   result_all = rbind(result_all, data.frame(lsoda(Init.cond, Time, model_function, param), alpha = alpha_t))
 }
 
