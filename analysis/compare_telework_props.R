@@ -1,5 +1,8 @@
 
-# this script runs 3 example scenarios of teleworking proportion (0, 0.5, 1)
+# this script runs example scenarios of teleworking proportion
+# you can define the scenarios to try by changing this vector:
+alpha_to_try = c(0, 0.2, 0.4, 0.6, 0.8, 1)
+
 # the community FOI is displayed in the final plot for convenience
 
 library(deSolve)
@@ -12,8 +15,8 @@ source(here::here("Model", "model.R"))
 
 R0 = 3.3              # Basic reproduction number
 alpha = 0             # proportion of teleworking
-omega = 0.001         # maximum rate of chronic disease due to teleworking
-max_lambda_v = 0.01   # maximum community force of infection
+omega = 1/100/365     # maximum rate of chronic disease due to teleworking
+max_lambda_v = 0.0001   # maximum community force of infection
 period = 200          # duration of epidemic wave in community
 nu = 0.35             # relative force of infection of asymptomatic cases
 epsilon = 0.5         # relative force of infection during teleworking
@@ -32,22 +35,16 @@ S0 = N-I0   # initial workplace susceptibles
 
 Time = seq(from=0,to=Tmax,by=dt)
 Init.cond = c(S=S0,E=0,Ia=I0,P=0,Is=0,R=0,S_c=0,E_c=0,Ia_c=0,P_c=0,Is_c=0,R_c=0) 
-param = c(R0, alpha, omega, max_lambda_v, period, nu, epsilon, sigma, rho, prop_a, gamma_a, gamma_s)
-names(param) = c("R0", "alpha", "omega", "max_lambda_v", "period", "nu", "epsilon", "sigma", "rho", "prop_a", "gamma_a", "gamma_s")
+param = c(R0=R0, alpha=alpha, omega=omega, max_lambda_v=max_lambda_v, period=period,
+          nu=nu, epsilon=epsilon, sigma=sigma, rho=rho, prop_a=prop_a,
+          gamma_a=gamma_a, gamma_s=gamma_s)
 
-result0 = as.data.frame(lsoda(Init.cond, Time, model_function, param))
-result0$alpha = 0
-param["alpha"] = 0.1         # proportion of teleworking
-result01 = as.data.frame(lsoda(Init.cond, Time, model_function, param), alpha = 0.1)
-result01$alpha = 0.1
-param["alpha"] = 0.5         # proportion of teleworking
-result05 = as.data.frame(lsoda(Init.cond, Time, model_function, param), alpha = 0.5)
-result05$alpha = 0.5
-param["alpha"] = 1          # proportion of teleworking
-result1 = as.data.frame(lsoda(Init.cond, Time, model_function, param), alpha = 1)
-result1$alpha = 1
+result_all = data.frame()
 
-result_all = rbind(result0, result05, result01, result1)
+for(alpha_t in alpha_to_try){
+  param["alpha"] = alpha_t         # proportion of teleworking
+  result_all = rbind(result_all, data.frame(lsoda(Init.cond, Time, model_function, param), alpha = alpha_t))
+}
 
 p1 = result_all %>%
   mutate(

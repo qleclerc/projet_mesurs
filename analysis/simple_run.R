@@ -32,7 +32,9 @@ S0 = N-I0   # initial workplace susceptibles
 
 Time = seq(from=0,to=Tmax,by=dt)
 Init.cond = c(S=S0,E=0,Ia=I0,P=0,Is=0,R=0,S_c=0,E_c=0,Ia_c=0,P_c=0,Is_c=0,R_c=0) 
-param = c(R0, alpha, omega, max_lambda_v, period, nu, epsilon, sigma, rho, prop_a, gamma_a, gamma_s)
+param = c(R0=R0, alpha=alpha, omega=omega, max_lambda_v=max_lambda_v, period=period,
+          nu=nu, epsilon=epsilon, sigma=sigma, rho=rho, prop_a=prop_a,
+          gamma_a=gamma_a, gamma_s=gamma_s)
 
 result = as.data.frame(lsoda(Init.cond, Time, model_function, param))
 

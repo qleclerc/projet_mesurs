@@ -16,7 +16,6 @@ model_function = function(t, pop, param) {
     # For a frequency-dependent model, R0 = beta*alpha/gamma_a
     # For a density-dependent model, R0 = beta*alpha*N/gamma_a
     
-    ## TODO change beta calculation here! DONE !
     if (alpha == 1) {
       beta = 0
     } else {
