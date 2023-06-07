@@ -29,9 +29,11 @@ The transmission rate $\lambda$ is divided into three terms as follows:
 
 $$\lambda = \frac{5}{7} (1-\alpha) \frac{\beta}{N-I_S} (\nu I_A + E_2) + \frac{5}{7} \alpha \epsilon \lambda_v + \frac{2}{7} \lambda_v$$
 
-**A modifier**
+Where $\beta$ is expressed using SARS-CoV-2 $R_0$ that we derived from the next-generation matrix for a frequency-dependent model:
 
-Where $\beta$ is expressed using SARS-CoV-2 $R_0$ that we derived from the next-generation matrix for a frequency-dependent model $\beta = \frac{R_0 \rho \gamma_A}{(1-\alpha) [(1 - p_A) \gamma_A + \rho \nu p_A]}$, $\alpha$ is the proportion of employees teleworking, $\nu$ is the coefficient of relative infectivity of asymptomatic cases ($I_A$) compared to symptomatic cases ($E_2$ and $I_S$), $\lambda_v$ is the transmission rate from the community, and $\epsilon$ is a coefficient reducing the transmission from the community on teleworking days.
+$$\beta = \frac{R_0 \rho \gamma_A}{(1-\alpha) [(1 - p_A) \gamma_A + \rho \nu p_A]}$$
+
+$\alpha$ is the proportion of employees teleworking, $\nu$ is the coefficient of relative infectivity of asymptomatic cases ($I_A$) compared to symptomatic cases ($E_2$ and $I_S$), $\lambda_v$ is the transmission rate from the community, and $\epsilon$ is a coefficient reducing the transmission from the community on teleworking days.
 
 In addition to the transmission process of the infectious disease, we modelled the number of individuals who will ultimately develop a chronic disease following exposure to teleworking. To do so, we stratified the compartmental model into two populations, one population that will not develop a chronic disease, and a second that will develop a chronic disease. Given the different time scales of occurrence of the chronic disease and the infectious disease, we assume that the two populations mix homogeneously between them.
 
