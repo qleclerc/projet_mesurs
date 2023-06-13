@@ -1,15 +1,15 @@
 
 # this script contains the model function
 
-model_function = function(t, pop, param) {
+model_function = function(t, pop, param, commu_FOI) {
   
   with(as.list(c(param, pop)), {
     
     N=S+E+Ia+P+Is+R+S_c+E_c+Ia_c+P_c+Is_c+R_c
     
     # Community force of infection
-    # estimated with a sin function, shifted by 300 to align with the start of the simulation
-    lambda_v = max_lambda_v/2*(sin((2*pi/period)*t+300)+1)
+    # Extrapolate at time t in the solver from the provided interpolating function commu_FOI()
+    lambda_v = commu_FOI(t)
     
     # Total force of infection
     # workplace infections + weekend infections + telework infections

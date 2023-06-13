@@ -16,8 +16,6 @@ source(here::here("Model", "model.R"))
 R0 = 3.3              # Basic reproduction number
 alpha = 0             # proportion of teleworking
 omega = 1/100/365     # maximum rate of chronic disease due to teleworking
-max_lambda_v = 0.0001   # maximum community force of infection
-period = 200          # duration of epidemic wave in community
 nu = 0.35             # relative force of infection of asymptomatic cases
 epsilon = 0.5         # relative force of infection during teleworking
 sigma = 1/1.5         # progression rate from exposed to infectious
@@ -35,15 +33,26 @@ S0 = N-I0   # initial workplace susceptibles
 
 Time = seq(from=0,to=Tmax,by=dt)
 Init.cond = c(S=S0,E=0,Ia=I0,P=0,Is=0,R=0,S_c=0,E_c=0,Ia_c=0,P_c=0,Is_c=0,R_c=0) 
-param = c(R0=R0, alpha=alpha, omega=omega, max_lambda_v=max_lambda_v, period=period,
+param = c(R0=R0, alpha=alpha, omega=omega,
           nu=nu, epsilon=epsilon, sigma=sigma, rho=rho, prop_a=prop_a,
           gamma_a=gamma_a, gamma_s=gamma_s)
+
+# community force of infection
+# uses approxfun() to generate an interpolating function, passed to the model function
+# whilst there is no data, still using sin function shifted by 300 to align with start of simulation
+commu_FOI = approxfun(c(0:1000), 0.001/2*(sin((2*pi/200)*c(0:1000)+300)+1))
+
+#with data will look something like:
+# commu_FOI = approxfun(data_time_points, data_values)
+
 
 result_all = data.frame()
 
 for(alpha_t in alpha_to_try){
   param["alpha"] = alpha_t         # proportion of teleworking
-  result_all = rbind(result_all, data.frame(lsoda(Init.cond, Time, model_function, param), alpha = alpha_t))
+  result_all = rbind(result_all,
+                     data.frame(lsoda(Init.cond, Time, model_function, param, commu_FOI = commu_FOI),
+                                alpha = alpha_t))
 }
 
 p1 = result_all %>%
@@ -71,8 +80,8 @@ p2 = result_all %>%
   theme_bw() +
   labs(x = "Time (days)", y = "Cumulative number of individuals eventually\ndeveloping a chronic disease", col = "")
 
-p3 = data.frame(time = result_all$time[result_all$alpha == 0],
-                val = max_lambda_v/2*(sin((2*pi/period)*result_all$time[result_all$alpha == 0]+300)+1)) %>%
+p3 = data.frame(time = unique(result_all$time),
+                val = commu_FOI(unique(result_all$time))) %>%
   ggplot() +
   geom_line(aes(time, val)) +
   theme_bw() +
