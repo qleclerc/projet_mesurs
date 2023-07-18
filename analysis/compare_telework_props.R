@@ -47,9 +47,10 @@ commu_FOI = approxfun(c(0:1000), 0.001/2*(sin((2*pi/200)*c(0:1000)+300)+1))
 # rate of chronic disease linked to telework
 # uses approxfun() to generate an interpolating function, passed to the model function
 # whilst there is no data, still using a constant max rate multiplied by alpha
-#chronic_rate = approxfun(seq(0,1,0.1), seq(0,1,0.1)*(1/100/365))
-source(here::here("model", "risk_MSD.R"))
-
+chronic_rate = approxfun(seq(0,1,0.1), (0.01+seq(0,1,0.1)*0.06)/365)
+fig_label = "lin"
+# source(here::here("model", "risk_MSD.R"))
+# fig_label = "revU"
 
 result_all = data.frame()
 
@@ -95,15 +96,34 @@ p3 = data.frame(time = unique(result_all$time),
   labs(x = "Time", y = "Community force of infection") 
 
 p4 = data.frame(prop = seq(0,1,0.01),
-                val = chronic_rate(seq(0,1,0.01))) %>%
+                val = chronic_rate(seq(0,1,0.01))*100*365) %>%
   ggplot() +
   geom_line(aes(prop, val), linewidth = 1) +
   theme_bw() +
-  labs(x = "Telework proportion", y = "Rate of chronic disease")
+  labs(x = "Telework proportion", y = "Annual incidence rate of\nchronic disease (%)")
 
 plot_grid(p1, p2,
           plot_grid(p3, p4, nrow = 1),
           nrow=3,
           rel_heights = c(1, 1, 0.5))
 
-ggsave(here::here("figures", "example_telework_scenarios.png"), height = 10)
+ggsave(here::here("figures", paste0("example_telework_scenarios",fig_label,".png")), height = 10)
+
+result_all %>%
+  filter(time == max(time)) %>% 
+  mutate(R = R + R_c,
+         C = S_c+E_c+Ia_c+P_c+Is_c+R_c) %>%
+  select(alpha, R, C) %>%
+  melt(id.vars = "alpha") %>%
+  mutate(variable = as.character(variable)) %>%
+  mutate(variable = replace(variable, variable == "R", "Covid19")) %>%
+  mutate(variable = replace(variable, variable == "C", "Chronic disease")) %>%
+  ggplot() +
+  facet_wrap(~variable, scales = "free_y") +
+  geom_line(aes(alpha, value, colour = variable), linewidth = 1) +
+  theme_bw() +
+  labs(x = "Telework proportion",
+       y = paste0("Cumulative incidence after ", max(result_all$time)," days")) +
+  guides(colour = "none")
+  
+ggsave(here::here("figures", paste0("example_telework_cumulative_inc",fig_label,".png")))
