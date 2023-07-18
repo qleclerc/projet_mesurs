@@ -45,10 +45,8 @@ commu_FOI = approxfun(c(0:1000), 0.001/2*(sin((2*pi/200)*c(0:1000)+300)+1))
 # rate of chronic disease linked to telework
 # uses approxfun() to generate an interpolating function, passed to the model function
 # whilst there is no data, still using a constant max rate multiplied by alpha
-chronic_rate = approxfun(seq(0,1,0.1), seq(0,1,0.1)*(1/100/365))
-
-#with data will look something like:
-# chronic_rate = approxfun(data_points, data_values)
+#chronic_rate = approxfun(seq(0,1,0.1), seq(0,1,0.1)*(1/100/365))
+source(here::here("model", "risk_MSD.R"))
 
 result = as.data.frame(lsoda(Init.cond, Time, model_function, param,
                              commu_FOI = commu_FOI, chronic_rate = chronic_rate))

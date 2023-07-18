@@ -47,10 +47,8 @@ commu_FOI = approxfun(c(0:1000), 0.001/2*(sin((2*pi/200)*c(0:1000)+300)+1))
 # rate of chronic disease linked to telework
 # uses approxfun() to generate an interpolating function, passed to the model function
 # whilst there is no data, still using a constant max rate multiplied by alpha
-chronic_rate = approxfun(seq(0,1,0.1), seq(0,1,0.1)*(1/100/365))
-
-#with data will look something like:
-# chronic_rate = approxfun(data_points, data_values)
+#chronic_rate = approxfun(seq(0,1,0.1), seq(0,1,0.1)*(1/100/365))
+source(here::here("model", "risk_MSD.R"))
 
 
 result_all = data.frame()
@@ -76,14 +74,15 @@ p1 = result_all %>%
   melt(id.vars=c("time", "alpha")) %>%
   ggplot() +
   facet_grid(cols = vars(alpha)) +
-  geom_line(aes(time, value, colour = variable)) +
+  geom_line(aes(time, value, colour = variable), linewidth = 1) +
+  scale_colour_brewer(palette = "Dark2") +
   theme_bw() +
   labs(x = "Time (days)", y = "Number of individuals", col = "")
 
 p2 = result_all %>%
   mutate(Tot_c = S_c + E_c + Ia_c + P_c + Is_c + R_c) %>%
   ggplot() +
-  geom_line(aes(time, Tot_c)) +
+  geom_line(aes(time, Tot_c), linewidth = 1) +
   facet_grid(cols = vars(alpha)) +
   theme_bw() +
   labs(x = "Time (days)", y = "Cumulative number of individuals eventually\ndeveloping a chronic disease", col = "")
@@ -91,11 +90,20 @@ p2 = result_all %>%
 p3 = data.frame(time = unique(result_all$time),
                 val = commu_FOI(unique(result_all$time))) %>%
   ggplot() +
-  geom_line(aes(time, val)) +
+  geom_line(aes(time, val), linewidth = 1) +
   theme_bw() +
   labs(x = "Time", y = "Community force of infection") 
 
-plot_grid(p1, p2, p3, nrow=3,
+p4 = data.frame(prop = seq(0,1,0.01),
+                val = chronic_rate(seq(0,1,0.01))) %>%
+  ggplot() +
+  geom_line(aes(prop, val), linewidth = 1) +
+  theme_bw() +
+  labs(x = "Telework proportion", y = "Rate of chronic disease")
+
+plot_grid(p1, p2,
+          plot_grid(p3, p4, nrow = 1),
+          nrow=3,
           rel_heights = c(1, 1, 0.5))
 
-#ggsave(here::here("figures", "example_telework_scenarios.png"))
+ggsave(here::here("figures", "example_telework_scenarios.png"), height = 10)
