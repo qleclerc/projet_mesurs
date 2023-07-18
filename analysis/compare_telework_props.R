@@ -15,7 +15,6 @@ source(here::here("Model", "model.R"))
 
 R0 = 3.3              # Basic reproduction number
 alpha = 0             # proportion of teleworking
-omega = 1/100/365     # maximum rate of chronic disease due to teleworking
 nu = 0.35             # relative force of infection of asymptomatic cases
 epsilon = 0.5         # relative force of infection during teleworking
 sigma = 1/1.5         # progression rate from exposed to infectious
@@ -33,7 +32,7 @@ S0 = N-I0   # initial workplace susceptibles
 
 Time = seq(from=0,to=Tmax,by=dt)
 Init.cond = c(S=S0,E=0,Ia=I0,P=0,Is=0,R=0,S_c=0,E_c=0,Ia_c=0,P_c=0,Is_c=0,R_c=0) 
-param = c(R0=R0, alpha=alpha, omega=omega,
+param = c(R0=R0, alpha=alpha,
           nu=nu, epsilon=epsilon, sigma=sigma, rho=rho, prop_a=prop_a,
           gamma_a=gamma_a, gamma_s=gamma_s)
 
@@ -45,13 +44,22 @@ commu_FOI = approxfun(c(0:1000), 0.001/2*(sin((2*pi/200)*c(0:1000)+300)+1))
 #with data will look something like:
 # commu_FOI = approxfun(data_time_points, data_values)
 
+# rate of chronic disease linked to telework
+# uses approxfun() to generate an interpolating function, passed to the model function
+# whilst there is no data, still using a constant max rate multiplied by alpha
+chronic_rate = approxfun(seq(0,1,0.1), seq(0,1,0.1)*(1/100/365))
+
+#with data will look something like:
+# chronic_rate = approxfun(data_points, data_values)
+
 
 result_all = data.frame()
 
 for(alpha_t in alpha_to_try){
   param["alpha"] = alpha_t         # proportion of teleworking
   result_all = rbind(result_all,
-                     data.frame(lsoda(Init.cond, Time, model_function, param, commu_FOI = commu_FOI),
+                     data.frame(lsoda(Init.cond, Time, model_function, param,
+                                      commu_FOI = commu_FOI, chronic_rate = chronic_rate),
                                 alpha = alpha_t))
 }
 

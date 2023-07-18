@@ -1,7 +1,7 @@
 
 # this script contains the model function
 
-model_function = function(t, pop, param, commu_FOI) {
+model_function = function(t, pop, param, commu_FOI, chronic_rate) {
   
   with(as.list(c(param, pop)), {
     
@@ -19,32 +19,35 @@ model_function = function(t, pop, param, commu_FOI) {
     if (alpha == 1) {
       beta = 0
     } else {
-      ########################## VOIR MODIFICATIONS ICI !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      beta_0 = R0 * rho * gamma_a / ((1-prop_a) * gamma_a + rho * nu * prop_a) 
-      beta = beta_0
-      #beta = R0_new * rho * gamma_a / ( (1-alpha) * ((1-prop_a) * gamma_a + rho * nu * prop_a) )
+      beta = R0 * rho * gamma_a / ((1-prop_a) * gamma_a + rho * nu * prop_a) 
     }
-    lambda = 
-      5/7 * (1-alpha) * beta / (N-Is) * (nu * (Ia+Ia_c) + (P+P_c)) + 
+    
+    lambda = 5/7 * (1-alpha) * beta / (N-Is) * (nu * (Ia+Ia_c) + (P+P_c)) + 
       5/7 * alpha * epsilon * lambda_v + 
       2/7 * lambda_v
+    
+    # Rate of work-related chronic disease
+    # Extrapolate for the proportion of telework alpha from the provided function chronic_rate()
+    # Note this approach allows us to flexibly change alpha during the simulation, to
+    # reflect scenarios where telework might be introduced and then lifted
+    omega = chronic_rate(alpha)
     
     # Individuals without work-related chronic disease ####
     # Susceptible
     # - workplace infections - weekend infections - telework infections - chronic disease incidence
-    dS = -lambda*S - omega*alpha*S
+    dS = -lambda*S - omega*S
     
     # Exposed (non-infectious)
     # + infections - progressions to infectious - chronic disease incidence
-    dE = lambda*S - sigma*E - omega*alpha*E
+    dE = lambda*S - sigma*E - omega*E
     
     # Infected (asymptomatic)
     # + progressions from exposed - recoveries - chronic disease incidence
-    dIa = sigma*E*prop_a - gamma_a*Ia - omega*alpha*Ia
+    dIa = sigma*E*prop_a - gamma_a*Ia - omega*Ia
     
     # Pre-symptomatic (infectious)
     # + progressions from exposed - progressions to symptomatic - chronic disease incidence
-    dP = sigma*E*(1-prop_a) - rho*P - omega*alpha*P
+    dP = sigma*E*(1-prop_a) - rho*P - omega*P
     
     # Infected (symptomatic)
     # Note: no chronic disease incidence, as we assume these individuals are not working
@@ -53,26 +56,26 @@ model_function = function(t, pop, param, commu_FOI) {
     
     # Recovered
     # + recoveries - chronic disease incidence
-    dR = Ia*gamma_a + Is*gamma_s - omega*alpha*R
+    dR = Ia*gamma_a + Is*gamma_s - omega*R
     
     
     
     # Individuals without work-related chronic disease ####
     # Susceptible
     # - workplace infections - weekend infections - telework infections + chronic disease incidence
-    dS_c = -lambda*S_c + omega*alpha*S
+    dS_c = -lambda*S_c + omega*S
     
     # Exposed (non-infectious)
     # + infections - progressions to infectious + chronic disease incidence
-    dE_c = lambda*S_c - sigma*E_c + omega*alpha*E
+    dE_c = lambda*S_c - sigma*E_c + omega*E
     
     # Infected (asymptomatic)
     # + progressions from exposed - recoveries + chronic disease incidence
-    dIa_c = sigma*E_c*prop_a - gamma_a*Ia_c + omega*alpha*Ia
+    dIa_c = sigma*E_c*prop_a - gamma_a*Ia_c + omega*Ia
     
     # Pre-symptomatic (infectious)
     # + progressions from exposed - progressions to symptomatic + chronic disease incidence
-    dP_c = sigma*E_c*(1-prop_a) - rho*P_c + omega*alpha*P
+    dP_c = sigma*E_c*(1-prop_a) - rho*P_c + omega*P
     
     # Infected (symptomatic)
     # + progressions from pre-symptomatic - recoveries
@@ -80,7 +83,7 @@ model_function = function(t, pop, param, commu_FOI) {
     
     # Recovered
     # + recoveries + chronic disease incidence
-    dR_c = Ia_c*gamma_a + Is_c*gamma_s + omega*alpha*R
+    dR_c = Ia_c*gamma_a + Is_c*gamma_s + omega*R
     
     list(c(dS, dE, dIa, dP, dIs, dR, dS_c, dE_c, dIa_c, dP_c, dIs_c, dR_c))
     
