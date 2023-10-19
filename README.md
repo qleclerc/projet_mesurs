@@ -7,18 +7,18 @@ Contains the script for the model.
 
 ### Equations of the model
 
-We modelled SARS-CoV-2 transmission in a company of $N$ employees using a compartmental model. In this model, employees can be susceptible to the respiratory disease $S$, exposed to the disease but not yet infectious $E1$, exposed to the disease and infectious but not yet sick $E2$, infectious and asymptomatic $I_A$, infectious and symptomatic $I_S$, or recovered $R$. 
+We modelled SARS-CoV-2 transmission in a company of $N$ employees using a compartmental model. In this model, employees can be susceptible to the respiratory disease $S$, exposed to the disease but not yet infectious $E$, infectious and asymptomatic $I_A$, exposed to the disease and infectious but presymptomatic $P$, infectious and symptomatic $I_S$, or recovered $R$. 
 
 
 $$\frac{dS}{dt} = - \lambda S$$
 
-$$\frac{dE_1}{dt} = \lambda S - \sigma E_1$$
+$$\frac{dE}{dt} = \lambda S - \sigma E$$
 
-$$\frac{dE_2}{dt} = (1 - p_A) \sigma E_1 - \rho E_2 $$
+$$\frac{dI_A}{dt} = p_A \sigma E - \gamma_A I_A$$
 
-$$\frac{dI_A}{dt} = p_A \sigma E_1 - \gamma_A I_A$$
+$$\frac{dP}{dt} = (1 - p_A) \sigma E - \rho P $$
 
-$$\frac{dI_S}{dt} = \rho E_2 - \gamma_S I_S$$
+$$\frac{dI_S}{dt} = \rho P - \gamma_S I_S$$
 
 $$\frac{dR}{dt} = \gamma_A I_A + \gamma_S I_S$$
 
@@ -27,13 +27,13 @@ In this compartmental model, infected individuals can develop symptoms with prob
 
 The transmission rate $\lambda$ is divided into three terms as follows:
 
-$$\lambda = \frac{5}{7} (1-\alpha) \frac{\beta}{N-I_S} (\nu I_A + E_2) + \frac{5}{7} \alpha \epsilon \lambda_v + \frac{2}{7} \lambda_v$$
+$$\lambda = \frac{5}{7} (1-\alpha) \frac{\beta (\nu I_A + P)}{N-I_S} + \frac{5}{7} \alpha \epsilon \lambda_v + \frac{2}{7} \lambda_v$$
 
 Where $\beta$ is expressed using SARS-CoV-2 $R_0$ that we derived from the next-generation matrix for a frequency-dependent model:
 
 $$\beta = \frac{R_0 \rho \gamma_A}{(1-\alpha) [(1 - p_A) \gamma_A + \rho \nu p_A]}$$
 
-$\alpha$ is the proportion of employees teleworking, $\nu$ is the coefficient of relative infectivity of asymptomatic cases ($I_A$) compared to symptomatic cases ($E_2$ and $I_S$), $\lambda_v$ is the transmission rate from the community, and $\epsilon$ is a coefficient reducing the transmission from the community on teleworking days.
+$\alpha$ is the proportion of employees teleworking, $\nu$ is the coefficient of relative infectivity of asymptomatic cases ($I_A$) compared to symptomatic cases ($P$ and $I_S$), $\lambda_v$ is the transmission rate from the community, and $\epsilon$ is a coefficient reducing the transmission from the community on teleworking days.
 
 In addition to the transmission process of the infectious disease, we modelled the number of individuals who will ultimately develop a chronic disease following exposure to teleworking. To do so, we stratified the compartmental model into two populations, one population that will not develop a chronic disease, and a second that will develop a chronic disease. Given the different time scales of occurrence of the chronic disease and the infectious disease, we assume that the two populations mix homogeneously between them.
 
@@ -56,7 +56,7 @@ Need to find estimates for $\gamma_A$ and $\gamma_S$.
 
 ## Analysis folder
 
-Contains scripts used to run the model.
+Contains scripts used to run the model and generate figures.
 
 ## Figures folder
 
