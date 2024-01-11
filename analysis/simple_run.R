@@ -12,6 +12,7 @@ source(here::here("Model", "model.R"))
 
 R0 = 3.3              # Basic reproduction number
 alpha = 0.1           # proportion of teleworking
+t_alpha = -1          # activation time for teleworking (default -1 = always on)
 nu = 0.35             # relative force of infection of asymptomatic cases
 epsilon = 0.5         # relative force of infection during teleworking
 sigma = 1/1.5         # progression rate from exposed to infectious
@@ -30,7 +31,7 @@ S0 = N-I0   # initial workplace susceptibles
 
 Time = seq(from=0,to=Tmax,by=dt)
 Init.cond = c(S=S0,E=0,Ia=I0,P=0,Is=0,R=0,S_c=0,E_c=0,Ia_c=0,P_c=0,Is_c=0,R_c=0) 
-param = c(R0=R0, alpha=alpha,
+param = c(R0=R0, alpha=alpha, t_alpha = t_alpha,
           nu=nu, epsilon=epsilon, sigma=sigma, rho=rho, prop_a=prop_a,
           gamma_a=gamma_a, gamma_s=gamma_s)
 

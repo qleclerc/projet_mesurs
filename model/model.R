@@ -7,6 +7,10 @@ model_function = function(t, pop, param, commu_FOI, chronic_rate) {
     
     N=S+E+Ia+P+Is+R+S_c+E_c+Ia_c+P_c+Is_c+R_c
     
+    # Teleworking activation
+    # Teleworking is only activated if we are past the activation time
+    alpha = ifelse(t >= t_alpha, alpha, 0)
+    
     # Community force of infection
     # Extrapolate at time t in the solver from the provided interpolating function commu_FOI()
     lambda_v = commu_FOI(t)
@@ -31,6 +35,9 @@ model_function = function(t, pop, param, commu_FOI, chronic_rate) {
     # Note this approach allows us to flexibly change alpha during the simulation, to
     # reflect scenarios where telework might be introduced and then lifted
     omega = chronic_rate(alpha)
+    
+    #force omega = 0 if alpha = 0
+    if(alpha == 0) omega = 0
     
     # Individuals without work-related chronic disease ####
     # Susceptible
