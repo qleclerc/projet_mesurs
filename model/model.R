@@ -1,7 +1,7 @@
 
 # this script contains the model function
 
-model_function = function(t, pop, param, commu_FOI, chronic_rate) {
+model_function = function(t, pop, param, commu_FOI, NCD_rate) {
   
   with(as.list(c(param, pop)), {
     
@@ -34,10 +34,10 @@ model_function = function(t, pop, param, commu_FOI, chronic_rate) {
     # Extrapolate for the proportion of telework alpha from the provided function chronic_rate()
     # Note this approach allows us to flexibly change alpha during the simulation, to
     # reflect scenarios where telework might be introduced and then lifted
-    omega = chronic_rate(alpha)
+    omega = baseline_NCD*NCD_rate(alpha)
     
     #force omega = 0 if alpha = 0
-    if(alpha == 0) omega = 0
+    # if(alpha == 0) omega = 0
     
     # Individuals without work-related chronic disease ####
     # Susceptible
