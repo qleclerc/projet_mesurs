@@ -7,6 +7,8 @@ library(reshape2)
 library(dplyr)
 library(cowplot)
 library(ggpubr)
+library(openxlsx)
+library(here)
 
 source(here::here("Model", "model.R"))
 
@@ -14,7 +16,7 @@ R0 = 2.66              # Basic reproduction number
 alpha = 0.1           # proportion of teleworking
 t_alpha = -1          # activation time for teleworking (default -1 = always on)
 nu = 0.35             # relative force of infection of asymptomatic cases
-epsilon = 0.5         # relative force of infection during teleworking
+epsilon = 0.21         # relative force of infection during teleworking
 sigma = 1/6.57         # progression rate from exposed to infectious
 rho = 1/1.5           # progression rate from pre-symptomatic to symptomatic
 prop_a = 0.2          # proportion of asymptomatic infections
@@ -40,10 +42,21 @@ param = c(R0=R0, alpha=alpha, t_alpha = t_alpha,
 # community force of infection
 # uses approxfun() to generate an interpolating function, passed to the model function
 # whilst there is no data, still using sin function shifted by 300 to align with start of simulation
-commu_FOI = approxfun(c(0:1000), 0.001/2*(sin((2*pi/200)*c(0:1000)+300)+1))
+# commu_FOI = approxfun(c(0:1000), 0.001/2*(sin((2*pi/200)*c(0:1000)+300)+1))
+df <- read.xlsx(here("data", "extract_results_Laura.xlsx"), rows = c(1:6189))
 
-#with data will look something like:
-# commu_FOI = approxfun(data_time_points, data_values)
+df <- df %>%
+  select(Time, AgeGroup, Exposed, Susceptible) %>%
+  filter(AgeGroup %in% c("20-24", "25-29", "30-34", "35-39", "40-44", "45-49",
+                         "50-54", "55-59", "60-64")) %>%
+  group_by(Time) %>%
+  summarise(Exposed = sum(Exposed), Susceptible = sum(Susceptible)) %>%
+  mutate(Proba = Exposed/Susceptible) %>%
+  mutate(Taux = -log(1-Proba)) %>%
+  ungroup %>%
+  filter(!is.nan(Taux))
+
+commu_FOI = approxfun(c(0:362), df$Taux)
 
 # rate of chronic disease linked to telework
 # uses approxfun() to generate an interpolating function, passed to the model function

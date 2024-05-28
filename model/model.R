@@ -23,7 +23,7 @@ model_function = function(t, pop, param, commu_FOI, NCD_rate) {
     if (alpha == 1) {
       beta = 0
     } else {
-      beta = R0 * rho * gamma_a / ((1-prop_a) * gamma_a + rho * nu * prop_a) 
+      beta = 7*R0 * rho * gamma_a / (5*(1-prop_a) * gamma_a + rho * nu * prop_a) 
     }
     
     lambda = 5/7 * (1-alpha) * beta * (nu*(Ia+Ia_c) + (P+P_c))/(N-Is)  + 

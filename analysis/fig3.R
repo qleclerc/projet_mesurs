@@ -7,6 +7,8 @@ library(reshape2)
 library(dplyr)
 library(cowplot)
 library(ggh4x)
+library(here)
+library(openxlsx)
 
 source(here::here("Model", "model.R"))
 
@@ -36,7 +38,22 @@ param = c(R0=R0, alpha=alpha,
           gamma_a=gamma_a, gamma_s=gamma_s, baseline_NCD=baseline_NCD)
 
 # community force of infection
-commu_FOI = approxfun(c(0:1000), 0.005/2*(sin((2*pi/90)*c(0:1000)+300)+1))
+df <- read.xlsx(here("data", "extract_results_Laura.xlsx"), rows = c(1:6189)) %>%
+  mutate(Time = as_date(Time, origin = "1899-12-30 UTC"))
+
+df <- df %>%
+  select(Time, AgeGroup, Exposed, Susceptible) %>%
+  filter(AgeGroup %in% c("20-24", "25-29", "30-34", "35-39", "40-44", "45-49",
+                         "50-54", "55-59", "60-64")) %>%
+  group_by(Time) %>%
+  summarise(Exposed = sum(Exposed), Susceptible = sum(Susceptible)) %>%
+  mutate(Proba = Exposed/Susceptible) %>%
+  mutate(Taux = -log(1-Proba)) %>%
+  ungroup %>%
+  filter(!is.nan(Taux)) %>%
+  filter(Time >= as_date("2020-09-01") & Time <= as_date("2020-12-01"))
+
+commu_FOI = approxfun(c(0:(nrow(df)-1)), df$Taux)
 
 result_all = data.frame()
 
@@ -49,23 +66,23 @@ for(alpha in seq(0, 1, 0.2)){
     
     param["t_alpha"] = t_alpha
     
-    # LINEAR INCREASING ####
-    
-    # NCD_rate = approxfun(seq(0,1,0.1), (0.01+seq(0,1,0.1)*0.06)/365)
-    NCD_rate = approxfun(c(0,0.5,1), c(7.04/7.04,7.3/7.04,7.46/7.04))
-    DRF = "LI"
-    
-    res = data.frame(lsoda(Init.cond, Time, model_function, param,
-                           commu_FOI = commu_FOI, NCD_rate = NCD_rate))
-    
-    result_all = rbind(result_all,
-                       res %>% filter(time == max(time)) %>% mutate(DRF = DRF, alpha = alpha, t_alpha = t_alpha))
+    # # LINEAR INCREASING ####
+    # 
+    # # NCD_rate = approxfun(seq(0,1,0.1), (0.01+seq(0,1,0.1)*0.06)/365)
+    # NCD_rate = approxfun(c(0,0.5,1), c(7.04/7.04,7.3/7.04,7.46/7.04))
+    # DRF = "Linear increasing"
+    # 
+    # res = data.frame(lsoda(Init.cond, Time, model_function, param,
+    #                        commu_FOI = commu_FOI, NCD_rate = NCD_rate))
+    # 
+    # result_all = rbind(result_all,
+    #                    res %>% filter(time == max(time)) %>% mutate(DRF = DRF, alpha = alpha, t_alpha = t_alpha))
     
     # LINEAR DECREASING ####
 
     # NCD_rate = approxfun(seq(0,1,0.1), (0.07-seq(0,1,0.1)*0.06)/365)
     NCD_rate = approxfun(c(0,1/20,4/20,1), c(-3.33/-3.33, -0.571/3.33+1, -0.997/3.33+1, -1.233/3.33+1))
-    DRF = "LD"
+    DRF = "Linear decreasing"
 
     res = data.frame(lsoda(Init.cond, Time, model_function, param,
                            commu_FOI = commu_FOI, NCD_rate = NCD_rate))
@@ -77,7 +94,7 @@ for(alpha in seq(0, 1, 0.2)){
     
     # NCD_rate = approxfun(seq(0,1,0.1), 0.00015/2*(sin((2*pi/1)*seq(0,1,0.1)+1.5)+1.1))
     NCD_rate = approxfun(c(0,0.5,1), c(2.33/2.33, 1.71/2.33, 2.08/2.33))
-    DRF = "US"
+    DRF = "U-shaped"
     
     res = data.frame(lsoda(Init.cond, Time, model_function, param,
                            commu_FOI = commu_FOI, NCD_rate = NCD_rate))
@@ -89,7 +106,7 @@ for(alpha in seq(0, 1, 0.2)){
 
     # NCD_rate = approxfun(seq(0,1,0.1), 0.00015/2*(sin((2*pi/1)*seq(0,1,0.1)+4.7)+1.1))
     NCD_rate = approxfun(c(0,0.2,0.5,1), c(49.9/49.9, 52.8/49.9, 53.2/49.9, 47.5/49.9))
-    DRF = "IU"
+    DRF = "Inverted U-shaped"
 
     res = data.frame(lsoda(Init.cond, Time, model_function, param,
                            commu_FOI = commu_FOI, NCD_rate = NCD_rate))
@@ -112,7 +129,8 @@ result_all2 = result_all %>%
   ungroup %>%
   select(DRF, alpha, t_alpha, Tot_c, Tot_r) %>% 
   mutate(Tot_tot = Tot_c+Tot_r) %>%
-  mutate(DRF = factor(DRF, levels = c("LI", "LD", "US", "IU")))
+  mutate(DRF = factor(DRF, levels = c("Linear decreasing",
+                                      "U-shaped", "Inverted U-shaped")))
 
 
 low_thresholds = result_all2 %>%
@@ -131,24 +149,24 @@ thresholds = result_all2 %>%
   group_by(DRF, alpha) %>%
   summarise(min_t = min(t_alpha), max_t = max(t_alpha))
 
-pa = ggplot(result_all2 %>% filter(alpha!=0)) +
-  geom_tile(aes(x = t_alpha, y = alpha, fill = Tot_c)) +
-  scale_fill_distiller(palette = "RdBu") +
-  facet_wrap(~DRF) +
-  theme_bw() +
-  scale_y_continuous(breaks = seq(0,1,0.2)) +
-  scale_x_continuous(breaks = seq(0,90,15)) +
-  labs(x = "Day of teleworking implementation start", y = "Telework frequency", fill = "ID relative\ncumulative incidence")
-  
-pb = ggplot(result_all2 %>% filter(alpha!=0) %>% filter(DRF == "LI")) +
-  geom_tile(aes(x = t_alpha, y = alpha, fill = Tot_r)) +
-  scale_fill_distiller(palette = "RdBu") +
-  theme_bw() +
-  scale_y_continuous(breaks = seq(0,1,0.2)) +
-  scale_x_continuous(breaks = seq(0,90,15)) +
-  labs(x = "Day of teleworking implementation start", y = "Telework frequency", fill = "NCD relative\ncumulative incidence")
-
-plot_grid(pa, pb, ncol = 1)
+# pa = ggplot(result_all2 %>% filter(alpha!=0)) +
+#   geom_tile(aes(x = t_alpha, y = alpha, fill = Tot_c)) +
+#   scale_fill_distiller(palette = "RdBu") +
+#   facet_wrap(~DRF) +
+#   theme_bw() +
+#   scale_y_continuous(breaks = seq(0,1,0.2)) +
+#   scale_x_continuous(breaks = seq(0,90,15)) +
+#   labs(x = "Day of teleworking implementation start", y = "Telework frequency", fill = "ID relative\ncumulative incidence")
+#   
+# pb = ggplot(result_all2 %>% filter(alpha!=0) %>% filter(DRF == "LI")) +
+#   geom_tile(aes(x = t_alpha, y = alpha, fill = Tot_r)) +
+#   scale_fill_distiller(palette = "RdBu") +
+#   theme_bw() +
+#   scale_y_continuous(breaks = seq(0,1,0.2)) +
+#   scale_x_continuous(breaks = seq(0,90,15)) +
+#   labs(x = "Day of teleworking implementation start", y = "Telework frequency", fill = "NCD relative\ncumulative incidence")
+# 
+# plot_grid(pa, pb, ncol = 1)
 
 
 ggplot(result_all2) +
@@ -158,16 +176,17 @@ ggplot(result_all2) +
   geom_line(data = result_all2 %>% filter(Tot_c <= 90), aes(t_alpha, Tot_c, colour = "Non-communicable disease"), linewidth = 1) +
   geom_line(data = result_all2 %>% filter(Tot_r <= 50), aes(t_alpha, Tot_r, colour = "Infectious disease"), linewidth = 1) +
   facet_nested_wrap(~DRF+alpha, ncol = 6) +
-  scale_x_continuous(breaks = seq(0,90,15)) +
+  scale_x_continuous(breaks = seq(0,90,20)) +
   scale_y_continuous(breaks = seq(10,110,20), limits = c(0,110)) +
   theme_bw() +
-  labs(x = "Day of teleworking implementation start", y = "Relative cumulative incidence (%)", colour = "") +
+  labs(x = "Day of teleworking implementation start",
+       y = "Relative cumulative incidence compared to no teleworking baseline(%)", colour = "") +
   theme(legend.position = "bottom",
         axis.text = element_text(size = 12),
         axis.title = element_text(size = 12),
         legend.text = element_text(size = 12),
         strip.text = element_text(size = 11))
 
-ggsave(here::here("figures", "fig3.png"), width = 9, height = 8)
+ggsave(here::here("figures", "fig3.png"), width = 9, height = 7)
 
        

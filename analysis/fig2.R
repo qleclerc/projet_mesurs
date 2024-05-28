@@ -10,8 +10,10 @@ library(ggplot2)
 library(reshape2)
 library(dplyr)
 library(cowplot)
+library(openxlsx)
+library(here)
 
-source(here::here("Model", "model.R"))
+source(here("Model", "model.R"))
 
 R0 = 2.66              # Basic reproduction number
 alpha = 0.1           # proportion of teleworking
@@ -40,8 +42,23 @@ param = c(R0=R0, alpha=alpha, t_alpha=t_alpha,
 
 # community force of infection
 # uses approxfun() to generate an interpolating function, passed to the model function
-# whilst there is no data, still using sin function shifted by 300 to align with start of simulation
-commu_FOI = approxfun(c(0:1000), 0.005/2*(sin((2*pi/90)*c(0:1000)+300)+1))
+df <- read.xlsx(here("data", "extract_results_Laura.xlsx"), rows = c(1:6189)) %>%
+  mutate(Time = as_date(Time, origin = "1899-12-30 UTC"))
+
+df <- df %>%
+  select(Time, AgeGroup, Exposed, Susceptible) %>%
+  filter(AgeGroup %in% c("20-24", "25-29", "30-34", "35-39", "40-44", "45-49",
+                         "50-54", "55-59", "60-64")) %>%
+  group_by(Time) %>%
+  summarise(Exposed = sum(Exposed), Susceptible = sum(Susceptible)) %>%
+  mutate(Proba = Exposed/Susceptible) %>%
+  mutate(Taux = -log(1-Proba)) %>%
+  ungroup %>%
+  filter(!is.nan(Taux)) %>%
+  filter(Time >= as_date("2020-09-01") & Time <= as_date("2020-12-01"))
+
+
+commu_FOI = approxfun(c(0:(nrow(df)-1)), df$Taux)
 
 #with data will look something like:
 # commu_FOI = approxfun(data_time_points, data_values)
@@ -55,23 +72,24 @@ result_RR_NCD = data.frame(alpha = alpha_to_try)
 
 # LINEAR INCREASING ####
 
-NCD_rate = approxfun(c(0,0.5,1), c(7.04/7.04,7.3/7.04,7.46/7.04))
-DRF = "LI"
-
-result_all = data.frame()
-
-for(alpha_t in alpha_to_try){
-  param["alpha"] = alpha_t         # proportion of teleworking
-  result_all = rbind(result_all,
-                     data.frame(lsoda(Init.cond, Time, model_function, param,
-                                      commu_FOI = commu_FOI, NCD_rate = NCD_rate),
-                                alpha = alpha_t))
-}
-
-result_NC_all = rbind(result_NC_all,
-                      result_all %>% filter(time == max(time)) %>% mutate(DRF = DRF))
-
-result_RR_NCD[,DRF] = NCD_rate(alpha_to_try)
+# NCD_rate = approxfun(c(0,0.5,1), c(7.04/7.04,7.3/7.04,7.46/7.04))
+# DRF = "LI"
+# 
+# result_all = data.frame()
+# 
+# for(alpha_t in alpha_to_try){
+#   param["alpha"] = alpha_t         # proportion of teleworking
+#   result_all = rbind(result_all,
+#                      data.frame(lsoda(Init.cond, Time, model_function, param,
+#                                       commu_FOI = commu_FOI, NCD_rate = NCD_rate),
+#                                 alpha = alpha_t))
+# }
+# 
+# result_NC_all = rbind(result_NC_all,
+#                       result_all %>% filter(time == max(time)) %>% mutate(DRF = DRF))
+# 
+# result_RR_NCD[,DRF] = NCD_rate(alpha_to_try)
+# 
 
 # LINEAR DECREASING ####
 
@@ -131,7 +149,7 @@ result_NC_all = rbind(result_NC_all,
                       result_all %>% filter(time == max(time)) %>% mutate(DRF = DRF))
 
 result_NC_all = result_NC_all %>%
-  mutate(DRF = factor(DRF, levels = c("LI", "LD", "US", "IU")))
+  mutate(DRF = factor(DRF, levels = c("LD", "US", "IU")))
 result_RR_NCD[,DRF] = NCD_rate(alpha_to_try)
 
 # PLOT ####
@@ -172,19 +190,19 @@ plot_grid(p1, p2,
 
 ggsave(here::here("figures", "fig2.png"), height = 7, width = 7)
 
-melt(result_RR_NCD, id.vars = c("alpha")) %>%
-  rename(DRF=variable, RR=value) %>%
-  mutate(DRF=factor(DRF, levels = c("LI", "LD", "US", "IU"))) %>%
-  ggplot() +
-  geom_line(aes(alpha, RR, colour = DRF), linewidth = 1) +
-  geom_hline(yintercept = 1, linetype = "dashed") +
-  theme_bw() +
-  labs(x = "Telework proportion", y = "Relative risk of developing a NCD", col = "") +
-  scale_y_continuous(limits = c(0.6, 1.1)) +
-  scale_x_continuous(breaks = seq(0,1,0.2)) +
-  theme(axis.text = element_text(size=12),
-        axis.title = element_text(size=12),
-        legend.text = element_text(size=11))
-
-ggsave(here::here("figures", "figpres.png"))
+# melt(result_RR_NCD, id.vars = c("alpha")) %>%
+#   rename(DRF=variable, RR=value) %>%
+#   mutate(DRF=factor(DRF, levels = c("LI", "LD", "US", "IU"))) %>%
+#   ggplot() +
+#   geom_line(aes(alpha, RR, colour = DRF), linewidth = 1) +
+#   geom_hline(yintercept = 1, linetype = "dashed") +
+#   theme_bw() +
+#   labs(x = "Telework proportion", y = "Relative risk of developing a NCD", col = "") +
+#   scale_y_continuous(limits = c(0.6, 1.1)) +
+#   scale_x_continuous(breaks = seq(0,1,0.2)) +
+#   theme(axis.text = element_text(size=12),
+#         axis.title = element_text(size=12),
+#         legend.text = element_text(size=11))
+# 
+# ggsave(here::here("figures", "figpres.png"))
 
