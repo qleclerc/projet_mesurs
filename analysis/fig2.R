@@ -14,18 +14,19 @@ library(openxlsx)
 library(here)
 
 source(here("Model", "model.R"))
+source(here("Model", "NCD_function.R"))
 
 R0 = 2.66              # Basic reproduction number
 alpha = 0.1           # proportion of teleworking
 t_alpha = -1          # activation time for teleworking (default -1 = always on)
 nu = 0.35             # relative force of infection of asymptomatic cases
-epsilon = 0.5         # relative force of infection during teleworking
+epsilon = 0.21         # relative force of infection during teleworking
 sigma = 1/6.57         # progression rate from exposed to infectious
 rho = 1/1.5           # progression rate from pre-symptomatic to symptomatic
 prop_a = 0.2          # proportion of asymptomatic infections
 gamma_a = 1/5         # recovery rate for asymptomatics
 gamma_s = 1/5         # recovery rate for symptomatics
-baseline_NCD = 0.0005   # baseline NCD rate
+baseline_NCD = 0.00014   # baseline NCD rate
 
 dt = 0.1    # time-step
 Tmax = 90  # max time
@@ -70,32 +71,11 @@ commu_FOI = approxfun(c(0:(nrow(df)-1)), df$Taux)
 result_NC_all = data.frame()
 result_RR_NCD = data.frame(alpha = alpha_to_try)
 
-# LINEAR INCREASING ####
-
-# NCD_rate = approxfun(c(0,0.5,1), c(7.04/7.04,7.3/7.04,7.46/7.04))
-# DRF = "LI"
-# 
-# result_all = data.frame()
-# 
-# for(alpha_t in alpha_to_try){
-#   param["alpha"] = alpha_t         # proportion of teleworking
-#   result_all = rbind(result_all,
-#                      data.frame(lsoda(Init.cond, Time, model_function, param,
-#                                       commu_FOI = commu_FOI, NCD_rate = NCD_rate),
-#                                 alpha = alpha_t))
-# }
-# 
-# result_NC_all = rbind(result_NC_all,
-#                       result_all %>% filter(time == max(time)) %>% mutate(DRF = DRF))
-# 
-# result_RR_NCD[,DRF] = NCD_rate(alpha_to_try)
-# 
-
 # LINEAR DECREASING ####
 
-# NCD_rate = approxfun(c(0,1/20,4/20,1), c(-3.33/-3.33, -0.571/3.33+1, -0.997/3.33+1, -1.233/3.33+1))
-NCD_rate = approxfun(c(0,1), c(-3.33/-3.33, -1.233/3.33+1))
-DRF = "LD"
+#assuming 20 days of work per months, 8h per day
+NCD_rate = NCD_function("LS")
+DRF = "LS"
 
 result_all = data.frame()
 
@@ -113,7 +93,7 @@ result_RR_NCD[,DRF] = NCD_rate(alpha_to_try)
 
 # INVERTED U SHAPED ####
 
-NCD_rate = approxfun(c(0,0.2,0.5,1), c(49.9/49.9, 52.8/49.9, 53.2/49.9, 47.5/49.9))
+NCD_rate = NCD_function("IU")
 DRF = "IU"
 
 result_all = data.frame()
@@ -132,7 +112,7 @@ result_RR_NCD[,DRF] = NCD_rate(alpha_to_try)
 
 # U SHAPED ####
 
-NCD_rate = approxfun(c(0,0.5,1), c(2.33/2.33, 1.71/2.33, 2.08/2.33))
+NCD_rate = NCD_function("US")
 DRF = "US"
 
 result_all = data.frame()
@@ -149,7 +129,7 @@ result_NC_all = rbind(result_NC_all,
                       result_all %>% filter(time == max(time)) %>% mutate(DRF = DRF))
 
 result_NC_all = result_NC_all %>%
-  mutate(DRF = factor(DRF, levels = c("LD", "US", "IU")))
+  mutate(DRF = factor(DRF, levels = c("LS", "US", "IU")))
 result_RR_NCD[,DRF] = NCD_rate(alpha_to_try)
 
 # PLOT ####

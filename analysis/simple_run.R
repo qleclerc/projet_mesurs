@@ -9,8 +9,10 @@ library(cowplot)
 library(ggpubr)
 library(openxlsx)
 library(here)
+library(lubridate)
 
 source(here::here("Model", "model.R"))
+source(here("Model", "NCD_function.R"))
 
 R0 = 2.66              # Basic reproduction number
 alpha = 0.1           # proportion of teleworking
@@ -22,11 +24,10 @@ rho = 1/1.5           # progression rate from pre-symptomatic to symptomatic
 prop_a = 0.2          # proportion of asymptomatic infections
 gamma_a = 1/5         # recovery rate for asymptomatics
 gamma_s = 1/5         # recovery rate for symptomatics
-
-baseline_NCD = 0.01 # baseline rate of non-communicable disease at 0 teleworking frequency
+baseline_NCD = 0.00014   # baseline NCD rate
 
 dt = 0.1    # time-step
-Tmax = 200  # max time
+Tmax = 90  # max time
 N = 5000    # population size
 
 I0 = 0      # initial workplace infected
@@ -43,7 +44,8 @@ param = c(R0=R0, alpha=alpha, t_alpha = t_alpha,
 # uses approxfun() to generate an interpolating function, passed to the model function
 # whilst there is no data, still using sin function shifted by 300 to align with start of simulation
 # commu_FOI = approxfun(c(0:1000), 0.001/2*(sin((2*pi/200)*c(0:1000)+300)+1))
-df <- read.xlsx(here("data", "extract_results_Laura.xlsx"), rows = c(1:6189))
+df <- read.xlsx(here("data", "extract_results_Laura.xlsx"), rows = c(1:6189)) %>%
+  mutate(Time = as_date(Time, origin = "1899-12-30 UTC"))
 
 df <- df %>%
   select(Time, AgeGroup, Exposed, Susceptible) %>%
@@ -54,14 +56,15 @@ df <- df %>%
   mutate(Proba = Exposed/Susceptible) %>%
   mutate(Taux = -log(1-Proba)) %>%
   ungroup %>%
-  filter(!is.nan(Taux))
+  filter(!is.nan(Taux)) %>%
+  filter(Time >= as_date("2020-09-01") & Time <= as_date("2020-12-01"))
 
-commu_FOI = approxfun(c(0:362), df$Taux)
+commu_FOI = approxfun(c(0:(nrow(df)-1)), df$Taux)
 
 # rate of chronic disease linked to telework
 # uses approxfun() to generate an interpolating function, passed to the model function
 # whilst there is no data, still using a constant max rate multiplied by alpha
-NCD_rate = approxfun(seq(0,1,0.1), seq(0,1,0.1)*(1/100/365))
+NCD_rate = NCD_function("IU")
 
 result = as.data.frame(lsoda(Init.cond, Time, model_function, param,
                              commu_FOI = commu_FOI, NCD_rate = NCD_rate))
