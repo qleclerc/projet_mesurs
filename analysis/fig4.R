@@ -1,5 +1,4 @@
 
-
 library(lubridate)
 library(deSolve)
 library(ggplot2)
@@ -68,17 +67,17 @@ for(alpha in seq(0, 1, 0.2)){
     param["t_alpha"] = t_alpha
     
     # L SHAPED ####
-    NCD_rate = NCD_function("LS")
+    NCD_rate = NCD_function("LS", TRUE, 0.3)
     DRF = "L-shaped"
-
+    
     res = data.frame(lsoda(Init.cond, Time, model_function, param,
                            commu_FOI = commu_FOI, NCD_rate = NCD_rate))
-
+    
     result_all = rbind(result_all,
                        res %>% filter(time == max(time)) %>% mutate(DRF = DRF, alpha = alpha, t_alpha = t_alpha))
     
     # U SHAPED ####
-    NCD_rate = NCD_function("US")
+    NCD_rate = NCD_function("US", TRUE, 0.3)
     DRF = "U-shaped"
     
     res = data.frame(lsoda(Init.cond, Time, model_function, param,
@@ -88,12 +87,32 @@ for(alpha in seq(0, 1, 0.2)){
                        res %>% filter(time == max(time)) %>% mutate(DRF = DRF, alpha = alpha, t_alpha = t_alpha))
     
     # INVERTED U SHAPED ####
-    NCD_rate = NCD_function("IU")
+    NCD_rate = NCD_function("IU", TRUE, 1.7)
     DRF = "Inverted U-shaped"
-
+    
     res = data.frame(lsoda(Init.cond, Time, model_function, param,
                            commu_FOI = commu_FOI, NCD_rate = NCD_rate))
-
+    
+    result_all = rbind(result_all,
+                       res %>% filter(time == max(time)) %>% mutate(DRF = DRF, alpha = alpha, t_alpha = t_alpha))
+    
+    # LINEAR INCREASING SHAPED ####
+    NCD_rate = NCD_function("LI", TRUE, 1.7)
+    DRF = "Linear increasing shaped"
+    
+    res = data.frame(lsoda(Init.cond, Time, model_function, param,
+                           commu_FOI = commu_FOI, NCD_rate = NCD_rate))
+    
+    result_all = rbind(result_all,
+                       res %>% filter(time == max(time)) %>% mutate(DRF = DRF, alpha = alpha, t_alpha = t_alpha))
+    
+    # LINEAR DECREASING SHAPED ####
+    NCD_rate = NCD_function("LD", TRUE, 0.3)
+    DRF = "Linear decreasing shaped"
+    
+    res = data.frame(lsoda(Init.cond, Time, model_function, param,
+                           commu_FOI = commu_FOI, NCD_rate = NCD_rate))
+    
     result_all = rbind(result_all,
                        res %>% filter(time == max(time)) %>% mutate(DRF = DRF, alpha = alpha, t_alpha = t_alpha))
     
@@ -113,7 +132,9 @@ result_all2 = result_all %>%
   select(DRF, alpha, t_alpha, Tot_c, Tot_r) %>% 
   mutate(Tot_tot = Tot_c+Tot_r) %>%
   mutate(DRF = factor(DRF, levels = c("L-shaped",
-                                      "U-shaped", "Inverted U-shaped")))
+                                      "U-shaped", "Inverted U-shaped",
+                                      "Linear increasing shaped",
+                                      "Linear decreasing shaped")))
 
 
 low_thresholds = result_all2 %>%
@@ -134,7 +155,7 @@ thresholds = result_all2 %>%
 
 
 ggplot(result_all2) +
-  geom_rect(data = thresholds, aes(xmin = min_t, xmax = max_t, ymin=0, ymax=110), alpha = 0.2) +
+  geom_rect(data = thresholds, aes(xmin = min_t, xmax = max_t, ymin=0, ymax=180), alpha = 0.2) +
   geom_hline(yintercept = 100, linetype="dashed", colour="grey10", alpha = 0.3) +
   geom_line(aes(t_alpha, Tot_c, colour = "Non-communicable disease"), linewidth = 0.8, alpha = 0.4) +
   geom_line(aes(t_alpha, Tot_r, colour = "Infectious disease"), linewidth = 0.8, alpha = 0.4) +
@@ -142,7 +163,7 @@ ggplot(result_all2) +
   geom_line(data = result_all2 %>% filter(Tot_r <= 50), aes(t_alpha, Tot_r, colour = "Infectious disease"), linewidth = 1) +
   facet_nested_wrap(~DRF+alpha, ncol = 6) +
   scale_x_continuous(breaks = seq(0,90,20)) +
-  scale_y_continuous(breaks = seq(10,110,20), limits = c(0,110)) +
+  scale_y_continuous(breaks = seq(0,180,30), limits = c(0,180)) +
   scale_colour_discrete(type = c("darkorange3","royalblue3")) +
   theme_bw() +
   labs(x = "Day of teleworking implementation start",
@@ -153,6 +174,5 @@ ggplot(result_all2) +
         legend.text = element_text(size = 12),
         strip.text = element_text(size = 11))
 
-ggsave(here::here("figures", "fig3.png"), width = 9, height = 7)
+ggsave(here::here("figures", "fig4.png"), width = 9, height = 10)
 
-       

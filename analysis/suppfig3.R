@@ -75,7 +75,7 @@ result_RR_NCD = data.frame(alpha = alpha_to_try)
 # LINEAR DECREASING ####
 
 #assuming 20 days of work per months, 8h per day
-NCD_rate = NCD_function("LS")
+NCD_rate = NCD_function("LS", TRUE, 0.3)
 DRF = "LS"
 
 result_all = data.frame()
@@ -94,7 +94,7 @@ result_RR_NCD[,DRF] = NCD_rate(alpha_to_try)
 
 # INVERTED U SHAPED ####
 
-NCD_rate = NCD_function("IU")
+NCD_rate = NCD_function("IU", TRUE, 1.7)
 DRF = "IU"
 
 result_all = data.frame()
@@ -113,7 +113,7 @@ result_RR_NCD[,DRF] = NCD_rate(alpha_to_try)
 
 # U SHAPED ####
 
-NCD_rate = NCD_function("US")
+NCD_rate = NCD_function("US", TRUE, 0.3)
 DRF = "US"
 
 result_all = data.frame()
@@ -128,62 +128,64 @@ for(alpha_t in alpha_to_try){
 
 result_NC_all = rbind(result_NC_all,
                       result_all %>% filter(time == max(time)) %>% mutate(DRF = DRF))
+result_RR_NCD[,DRF] = NCD_rate(alpha_to_try)
+
+# LINEAR DECREASING ####
+
+NCD_rate = NCD_function("LD", TRUE, 0.3)
+DRF = "LD"
+
+result_all = data.frame()
+
+for(alpha_t in alpha_to_try){
+  param["alpha"] = alpha_t         # proportion of teleworking
+  result_all = rbind(result_all,
+                     data.frame(lsoda(Init.cond, Time, model_function, param,
+                                      commu_FOI = commu_FOI, NCD_rate = NCD_rate),
+                                alpha = alpha_t))
+}
+
+result_NC_all = rbind(result_NC_all,
+                      result_all %>% filter(time == max(time)) %>% mutate(DRF = DRF))
+result_RR_NCD[,DRF] = NCD_rate(alpha_to_try)
+
+# LINEAR INCREASING ####
+
+NCD_rate = NCD_function("LI", TRUE, 1.7)
+DRF = "LI"
+
+result_all = data.frame()
+
+for(alpha_t in alpha_to_try){
+  param["alpha"] = alpha_t         # proportion of teleworking
+  result_all = rbind(result_all,
+                     data.frame(lsoda(Init.cond, Time, model_function, param,
+                                      commu_FOI = commu_FOI, NCD_rate = NCD_rate),
+                                alpha = alpha_t))
+}
+
+
+result_NC_all = rbind(result_NC_all,
+                      result_all %>% filter(time == max(time)) %>% mutate(DRF = DRF))
 
 result_NC_all = result_NC_all %>%
-  mutate(DRF = factor(DRF, levels = c("LS", "US", "IU")))
+  mutate(DRF = factor(DRF, levels = c("LS", "US", "IU", "LD", "LI")))
 result_RR_NCD[,DRF] = NCD_rate(alpha_to_try)
 
 # PLOT ####
 
-p1 = result_all %>%
-  mutate(
-    S = S + S_c, 
-    E = E + E_c, 
-    Ia = Ia + Ia_c,
-    P = P + P_c,
-    Is = Is + Is_c,
-    R = R + R_c
-  ) %>%
-  select(!contains("_c")) %>%
-  melt(id.vars=c("time", "alpha")) %>%
-  ggplot() +
-  facet_grid(cols = vars(alpha)) +
-  geom_line(aes(time, value, colour = variable), linewidth = 1) +
-  scale_colour_brewer(palette = "Dark2") +
-  theme_bw() +
-  labs(x = "Time (days)", y = "Number of individuals", col = "") +
-  theme(legend.position = "bottom") +
-  guides(colour = guide_legend(nrow=1))
-
-p2 = result_NC_all %>%
+result_NC_all %>%
   mutate(Tot_c = S_c + E_c + Ia_c + P_c + Is_c + R_c) %>%
   ggplot() +
   geom_point(aes(DRF, Tot_c, shape = DRF), size = 3) +
   facet_grid(cols = vars(alpha)) +
   theme_bw() +
   guides(shape = "none") +
-  labs(x = "Dose-response curve", y = "Cumulative number of individuals\neventually developing a NCD", col = "")
+  labs(x = "Exposure-response curve", y = "Cumulative number of individuals\neventually developing a NCD", col = "") +
+  theme(axis.text.x = element_text(size=11, angle=45, hjust=1),
+        axis.text.y = element_text(size=12),
+        axis.title = element_text(size=12),
+        strip.text = element_text(size=11))
 
-
-plot_grid(p1, p2,
-          nrow=2,
-          labels = c("a)", "b)"), hjust = 0)
-
-ggsave(here::here("figures", "fig2.png"), height = 7, width = 7)
-
-# melt(result_RR_NCD, id.vars = c("alpha")) %>%
-#   rename(DRF=variable, RR=value) %>%
-#   mutate(DRF=factor(DRF, levels = c("LI", "LD", "US", "IU"))) %>%
-#   ggplot() +
-#   geom_line(aes(alpha, RR, colour = DRF), linewidth = 1) +
-#   geom_hline(yintercept = 1, linetype = "dashed") +
-#   theme_bw() +
-#   labs(x = "Telework proportion", y = "Relative risk of developing a NCD", col = "") +
-#   scale_y_continuous(limits = c(0.6, 1.1)) +
-#   scale_x_continuous(breaks = seq(0,1,0.2)) +
-#   theme(axis.text = element_text(size=12),
-#         axis.title = element_text(size=12),
-#         legend.text = element_text(size=11))
-# 
-# ggsave(here::here("figures", "figpres.png"))
+ggsave(here::here("figures", "suppfig3.png"), width = 8, height = 4)
 

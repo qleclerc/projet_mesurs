@@ -1,6 +1,10 @@
 
 library(dplyr)
 library(ggplot2)
+library(RColorBrewer)
+
+# palette set to match supplementary figure 2
+pal = brewer.pal(5, "Set1")
 
 # LINEAR DECREASING ####
 
@@ -32,6 +36,7 @@ rbind(NCD_rate_LD, NCD_rate_IU, NCD_rate_US) %>%
   geom_hline(yintercept = 1, linetype = "dashed") +
   scale_y_continuous(breaks = seq(0,2,0.1)) +
   scale_x_continuous(breaks = seq(0,1,0.1)) +
+  scale_color_discrete(type = pal[c(1,4,5)]) +
   theme_bw() +
   labs(x = "Teleworking frequency", y = "Relative risk of non-communicable disease", colour = "") +
   theme(axis.text = element_text(size = 12),

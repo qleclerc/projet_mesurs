@@ -1,199 +1,52 @@
 
-#add prcc checking impact of parameters on relative reduction in cumulative incidence?
-library(deSolve)
-library(ggplot2)
-library(reshape2)
 library(dplyr)
-library(cowplot)
-library(ggpubr)
-library(openxlsx)
-library(here)
-library(epiR)
-library(lubridate)
+library(reshape2)
+library(ggplot2)
 
-source(here::here("Model", "model.R"))
-source(here("Model", "NCD_function.R"))
+source(here::here("model", "NCD_function.R"))
 
-R0 = 2.66              # Basic reproduction number
-alpha = 0.5           # proportion of teleworking
-t_alpha = -1          # activation time for teleworking (default -1 = always on)
-nu = 0.35             # relative force of infection of asymptomatic cases
-epsilon = 0.5         # relative force of infection during teleworking
-sigma = 1/6.57         # progression rate from exposed to infectious
-rho = 1/1.5           # progression rate from pre-symptomatic to symptomatic
-prop_a = 0.2          # proportion of asymptomatic infections
-gamma_a = 1/5         # recovery rate for asymptomatics
-gamma_s = 1/5         # recovery rate for symptomatics
-baseline_NCD = 0.00014   # baseline NCD rate
+# LINEAR DECREASING ####
 
-dt = 0.1    # time-step
-Tmax = 90  # max time
-N = 5000    # population size
+NCD_rate_LD = NCD_function("LD", TRUE, 0.3)
 
-I0 = 0      # initial workplace infected
-S0 = N-I0   # initial workplace susceptibles
+# LINEAR INCREASING ####
 
-Time = seq(from=0,to=Tmax,by=dt)
-Init.cond = c(S=S0,E=0,Ia=I0,P=0,Is=0,R=0,S_c=0,E_c=0,Ia_c=0,P_c=0,Is_c=0,R_c=0) 
+NCD_rate_LI = NCD_function("LI", TRUE, 1.7)
 
-# community force of infection
-# uses approxfun() to generate an interpolating function, passed to the model function
-df <- read.xlsx(here("data", "extract_results_Laura.xlsx"), rows = c(1:6189)) %>%
-  mutate(Time = as_date(Time, origin = "1899-12-30 UTC"))
+# INVERTED U SHAPED ####
 
-df <- df %>%
-  select(Time, AgeGroup, Exposed, Susceptible) %>%
-  filter(AgeGroup %in% c("20-24", "25-29", "30-34", "35-39", "40-44", "45-49",
-                         "50-54", "55-59", "60-64")) %>%
-  group_by(Time) %>%
-  summarise(Exposed = sum(Exposed), Susceptible = sum(Susceptible)) %>%
-  mutate(Proba = Exposed/Susceptible) %>%
-  mutate(Taux = -log(1-Proba)) %>%
-  ungroup %>%
-  filter(!is.nan(Taux)) %>%
-  filter(Time >= as_date("2020-09-01") & Time <= as_date("2020-12-01"))
+NCD_rate_IU = NCD_function("IU", TRUE, 1.7)
 
-commu_FOI = approxfun(c(0:(nrow(df)-1)), df$Taux)
+# U SHAPED ####
+
+NCD_rate_US = NCD_function("US", TRUE, 0.3)
+
+# L SHAPED ####
+
+NCD_rate_LS = NCD_function("LS", TRUE, 0.3)
 
 
-## sensitivity ###############
+# Plot ####
 
-n_runs = 400
+all_curves = data.frame(alpha = seq(0,1,0.02)) %>%
+  mutate(LD = NCD_rate_LD(alpha)) %>%
+  mutate(LI = NCD_rate_LI(alpha)) %>%
+  mutate(IU = NCD_rate_IU(alpha)) %>%
+  mutate(US = NCD_rate_US(alpha)) %>%
+  mutate(LS = NCD_rate_LS(alpha)) %>%
+  melt(id.vars = "alpha") %>%
+  mutate(variable = as.character(variable))
 
-all_results_LD = data.frame(R0=runif(n_runs, 2, 4),
-                            alpha=0,
-                            # alpha=runif(n_runs, 0.5, 1),
-                            t_alpha=t_alpha,
-                            nu=runif(n_runs, 0.1, 1.27),
-                            epsilon=runif(n_runs, epsilon*0.8, epsilon*1.2),
-                            sigma=runif(n_runs, 1/18.87, 1/1.80),
-                            rho=rho,
-                            prop_a=runif(n_runs, 0.17, 0.25),
-                            gamma_a=gamma_a,
-                            gamma_s=gamma_s,
-                            baseline_NCD = baseline_NCD,
-                            cumul_ID = 0,
-                            cumul_NCD = 0)
-
-all_results_US = all_results_IUS = all_results_LD
-
-all_results_IUS$shape = "IUS"
-all_results_US$shape = "US"
-all_results_LD$shape = "LD"
-
-for(i in 1:nrow(all_results_LD)){
-  
-  if(i %% round(nrow(all_results_LD)/10) == 0) cat(i/round(nrow(all_results_LD))*100, "% done\n")
-  
-  param = as.vector(all_results_LD[i,-c((ncol(all_results_LD)-1) , ncol(all_results_LD))])
-  
-  #L SHAPED
-  NCD_rate = NCD_function("LS")
-  results = as.data.frame(lsoda(Init.cond, Time, model_function, param,
-                                commu_FOI = commu_FOI, NCD_rate = NCD_rate))
-  results = results %>%
-    filter(time == max(time)) %>%
-    mutate(Tot_c = S_c + E_c + Ia_c + P_c + Is_c + R_c,
-           Tot_r = R + R_c)
-  
-  all_results_LD$cumul_ID[i] = results$Tot_r
-  all_results_LD$cumul_NCD[i] = results$Tot_c
-  
-  #U SHAPED
-  NCD_rate = NCD_function("US")
-  results = as.data.frame(lsoda(Init.cond, Time, model_function, param,
-                                commu_FOI = commu_FOI, NCD_rate = NCD_rate))
-  results = results %>%
-    filter(time == max(time)) %>%
-    mutate(Tot_c = S_c + E_c + Ia_c + P_c + Is_c + R_c,
-           Tot_r = R + R_c)
-  
-  all_results_US$cumul_ID[i] = results$Tot_r
-  all_results_US$cumul_NCD[i] = results$Tot_c
-  
-  #INVERTED U SHAPED
-  NCD_rate = NCD_function("IU")
-  results = as.data.frame(lsoda(Init.cond, Time, model_function, param,
-                                commu_FOI = commu_FOI, NCD_rate = NCD_rate))
-  results = results %>%
-    filter(time == max(time)) %>%
-    mutate(Tot_c = S_c + E_c + Ia_c + P_c + Is_c + R_c,
-           Tot_r = R + R_c)
-  
-  all_results_IUS$cumul_ID[i] = results$Tot_r
-  all_results_IUS$cumul_NCD[i] = results$Tot_c
-  
-}
-
-all_results_LD_m = all_results_LD %>%
-  select(R0, nu, epsilon, sigma, prop_a, cumul_ID) %>%
-  epi.prcc() %>%
-  mutate(shape = "LD") %>%
-  rename(param = var) %>%
-  mutate(cor = "ID")
-all_results_IUS_m = all_results_IUS %>%
-  select(R0, nu, epsilon, sigma, prop_a, cumul_ID) %>%
-  epi.prcc() %>%
-  mutate(shape = "IUS") %>%
-  rename(param = var) %>%
-  mutate(cor = "ID")
-all_results_US_m = all_results_US %>%
-  select(R0, nu, epsilon, sigma, prop_a, cumul_ID) %>%
-  epi.prcc() %>%
-  mutate(shape = "US") %>%
-  rename(param = var) %>%
-  mutate(cor = "ID")
-
-all_results_LD_m2 = all_results_LD %>%
-  select(R0, nu, epsilon, sigma, prop_a, cumul_NCD) %>%
-  epi.prcc() %>%
-  mutate(shape = "LD") %>%
-  rename(param = var) %>%
-  mutate(cor = "NCD")
-all_results_IUS_m2 = all_results_IUS %>%
-  select(R0, nu, epsilon, sigma, prop_a, cumul_NCD) %>%
-  epi.prcc() %>%
-  mutate(shape = "IUS") %>%
-  rename(param = var) %>%
-  mutate(cor = "NCD")
-all_results_US_m2 = all_results_US %>%
-  select(R0, nu, epsilon, sigma, prop_a, cumul_NCD) %>%
-  epi.prcc() %>%
-  mutate(shape = "US") %>%
-  rename(param = var) %>%
-  mutate(cor = "NCD")
-
-
-all_results = rbind(all_results_LD_m, all_results_US_m, all_results_IUS_m,
-                    all_results_LD_m2, all_results_US_m2, all_results_IUS_m2)
-
-ggplot(all_results %>% filter(shape=="LD")) +
-  geom_hline(yintercept = 0, linetype = "dotted") +
-  geom_hline(yintercept = 1, linetype = "solid") +
-  geom_hline(yintercept = -1, linetype = "solid") +
-  geom_hline(yintercept = 0.5, linetype = "dashed") +
-  geom_hline(yintercept = -0.5, linetype = "dashed") +
-  geom_pointrange(aes(x = param, y = est, group = cor, 
-                      ymin = lower, ymax = upper, colour = cor),
-                  position=position_dodge(width=0.2), size = 0.8) +
-  # facet_grid(rows = vars(shape)) +
+ggplot(all_curves, aes(alpha, value, colour = variable)) +
+  geom_line(linewidth = 0.8) +
+  geom_hline(yintercept = 1, linetype = "dashed") +
+  scale_y_continuous(breaks = seq(0,2,0.1)) +
+  scale_x_continuous(breaks = seq(0,1,0.1)) +
+  scale_color_brewer(palette = "Set1") +
   theme_bw() +
-  theme(axis.line = element_line(colour = "black"),
-        legend.key=element_blank(),
-        axis.text.x = element_text(size=12),
-        axis.title.x = element_text(size=12),
-        axis.text.y = element_text(size=12),
-        axis.title.y = element_text(size=12),
-        legend.text = element_text(size=12),
-        legend.title = element_text(size=12),
-        strip.text.x = element_text(size=12)) +
-  labs(colour = "", x = "Parameters", y = "Correlation coefficient") +
-  scale_x_discrete(labels = c(bquote(epsilon),
-                              bquote(nu),
-                              bquote(p[a]),
-                              bquote(R0),
-                              bquote(sigma))) +
-  scale_colour_discrete(type = c("darkorange3","royalblue3")) +
-  coord_cartesian(clip = "off", ylim = c(-1,1))
+  labs(x = "Teleworking frequency", y = "Relative risk of non-communicable disease", colour = "") +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 12),
+        legend.text = element_text(size = 11))
 
 ggsave(here::here("figures", "suppfig2.png"))
